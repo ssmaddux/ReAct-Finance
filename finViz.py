@@ -78,20 +78,7 @@ def html_strip_all_tags(html_string):
     
     return cleaned_text
 
-#experiencing limiting from OpenAi: error 429
-# def call_openai_get_summary_with_retry(company_name, txt_data):
-#     retries = 3
-#     for attempt in range(retries):
-#         try:
-#             return call_openai_get_summary(company_name, txt_data)
-#         except Exception as e:
-#             print(f"Error Calling OpenAI (Attempt {attempt + 1}): {e}")
-#             if attempt < retries - 1:
-#                 print("Retrying after 5 seconds...")
-#                 time.sleep(5)
-#             else:
-#                 print("All retries failed. Exiting.")
-#                 raise
+
 
 def call_openai_get_summary(company_name,txt_data):
     txt_data = txt_data[:45000]

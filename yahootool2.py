@@ -5,8 +5,8 @@ from langchain.tools import BaseTool, StructuredTool, tool
 
 
 class StockPrice(BaseTool):
-    name = "get_stock_price"
-    description = "Fetches the current stock price for a given ticker."
+    name: str = "get_stock_price"
+    description: str = "Fetches the current stock price for a given ticker."
 
     def _run(self, ticker: str) -> str:
 

@@ -1,57 +1,54 @@
-from playwright.async_api import async_playwright
-import asyncio
+from playwright.sync_api import sync_playwright
+from langchain.pydantic_v1 import BaseModel, Field
+from langchain.tools import BaseTool, StructuredTool, tool
 
-async def scrape_page_text(page):
-    # Wait for the content to fully load
-    await page.wait_for_load_state('networkidle')
-    # Evaluate JavaScript code to get the text content of the modal elements
-    page_text = await page.evaluate('document.querySelector("body").innerText')
-    return page_text
+class Tenk(BaseTool):
+    name: str = "get_tenk"
+    description: str = "Fetches a 10-k filing for a given company within the last year."
 
-async def main(ticker):
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        page = await browser.new_page()
-        url = f"https://www.sec.gov/edgar/search/#/dateRange=custom&entityName={ticker}&startdt=2023-03-16&enddt=2024-04-10&filter_forms=10-K"
-        await page.goto(url)
-
-        try:
-            # clicks the initial link/pauses code
-            await page.click("a.preview-file", timeout=60000)
-
-
-            # waits for modal to appear
-            await page.wait_for_selector('.preview-file', timeout=60000)  # Wait for the modal to appear
-            await page.click('.btn.btn-warning')
-
-            # Wait for the new tab to open
-            new_page = None
-            for _ in range(30):  # Try waiting for up to 30 seconds
-                new_page = await browser.contexts[0].wait_for_event('page', timeout=1000)
-                if new_page:
-                    break
-
-            if new_page:
-                # Capture the new URL
-                new_url = new_page.url
-                print("New URL:", new_url)
-
-                # Scrape text from the new tab
-                page_text = await scrape_page_text(new_page)
-                
-                # Print the scraped text directly to the console
-                print(page_text)
-                print("Page content scraped successfully from the new tab.")
-            else:
-                print("Timeout waiting for the new page.")
-
-        except TimeoutError:
-            print("Modal did not appear or took too long to appear.")
+    def _run(self, ticker: str) -> str:
         
-        await browser.close()
-        print("Browser closed.")
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=False)
+                page = browser.new_page()
+                url = f"https://www.sec.gov/edgar/search/#/dateRange=custom&entityName={ticker}&startdt=2023-03-16&enddt=2024-04-10&filter_forms=10-K"
+                page.goto(url)
+        
+                try:
+                    # Click the initial link
+                    page.click("a.preview-file", timeout=60000)
+        
+                    # Wait for the modal to appear
+                    page.wait_for_selector('.preview-file', timeout=60000)
+                    page.click('.btn.btn-warning')  # Click the button
+        
+                    # Wait for the new tab to open
+                    new_page = browser.contexts[0].wait_for_event('page', timeout=30000)
+        
+                    if new_page:
+                        new_url = new_page.url
+                        print("New URL:", new_url)
+        
+                        # Scrape text from the new tab
+                        page_text = new_page.evaluate('document.querySelector("body").innerText')
+                        print(page_text)
+                        print("Page content scraped successfully from the new tab.")
+                        return page_text  # Return the page text as a string
+                    else:
+                        print("Timeout waiting for the new page.")
+        
+                except TimeoutError:
+                    print("Modal did not appear or took too long to appear.")
+        
+                browser.close()
+                print("Browser closed.")
+        
+                return ""  # Return an empty string if scraping fails
 
-# Run the async function
-if __name__ == "__main__":
-    ticker = input("Enter ticker symbol: ")
-    asyncio.run(main(ticker))
+# Call the function
+# if __name__ == "__main__":
+#     def scrape_sec_page_text(ticker):
+#     ticker = input("Enter ticker symbol: ")
+#     scraped_text = scrape_sec_page_text(ticker)
+#     print("Scraped Text:")
+#     print(scraped_text)
