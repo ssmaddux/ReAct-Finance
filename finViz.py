@@ -7,7 +7,16 @@ import asyncio
 from playwright.async_api import async_playwright
 import traceback
 import time
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.tools import BaseTool, StructuredTool, tool
+from typing import Optional, Type
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForToolRun,
+    CallbackManagerForToolRun,
+)
+
+class TenKInput(BaseModel):
+    ticker: str = Field(description="stock ticker.")
 
 async def get_webpage_async(page, url, approach=0):
     try:  
@@ -142,7 +151,24 @@ async def get_finviz_links_summary(page, ticker, url):
 
     return news_summary
 
-async def main():
+class TenkSearchTool(BaseTool):
+    name = "tenk_search"
+    description = "Looks up 10-k filings for a given company"
+    args_schema: Type[BaseModel] = TenKInput
+
+    def _run(
+        self, ticker: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool."""
+        return "LangChain"
+
+    async def _arun(
+        self, ticker: str, run_manager: Optional[AsyncCallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("custom_search does not support async")
+     
+async def main(ticker: str)-> str:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)  # Launch browser once
         user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.79 Safari/537.36'
@@ -150,7 +176,7 @@ async def main():
         page = await browser.new_page()
         
         # Prompt user for ticker symbol
-        ticker = input("Please enter the ticker symbol of the company (e.g., AAPL for Apple, CRM for Salesforce): ")
+        # ticker = input("Please enter the ticker symbol of the company (e.g., AAPL for Apple, CRM for Salesforce): ")
         fin_viz_url = f"https://finviz.com/quote.ashx?t={ticker}&p=d"
         summary = await get_finviz_links_summary(page, ticker, fin_viz_url)
 
